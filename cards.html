@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>True Trello Printer</title>
+    <link href="http://netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+body{margin:15%;}
+
+.panel-body{
+  font-size: 1.2em;
+}
+    </style>
+    <STYLE type="text/css" media="print">
+body{margin:0;}
+
+.panel {
+  page-break-inside:avoid; page-break-after:auto;
+  height: 275px;
+  overflow: hidden;
+}
+    </STYLE>
+  </head>
+
+  <body>
+    <div id="out">
+      No Trello JSON data found
+    </div>
+
+    <script type="text/html" id="template-output" >
+{{#lists}}
+  <!-- <h1>List: {{name}}</h1> -->
+  {{#cards}}
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        <h2>{{name}}</h2>
+        {{{desc}}}
+      </div>
+      <ul class="list-group">
+        {{#actions}}
+          <li class="list-group-item">{{{text}}}</li>
+        {{/actions}}
+      </ul>
+    </div>
+  {{/cards}}
+{{/lists}}
+    </script>
+
+    <script src="http://cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js" type="text/javascript"></script>
+    <script src="http://cdnjs.cloudflare.com/ajax/libs/mustache.js/0.7.2/mustache.min.js" type="text/javascript"></script>
+    <script src="http://cdnjs.cloudflare.com/ajax/libs/moment.js/2.5.1/moment.min.js" type="text/javascript"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/0.3.5/marked.min.js" type="text/javascript"></script>
+    <script src="http://netdna.bootstrapcdn.com/bootstrap/3.0.3/js/bootstrap.min.js" type="text/javascript"></script>
+    <script src="./board.js" type="text/javascript"></script>
+
+    <script type="text/javascript">
+function eatData(trelloJson){
+  var data = {
+    board: trelloJson.name,
+    lists: [],
+    ref: {}
+  }
+
+  for(i in trelloJson.lists){
+    var list = trelloJson.lists[i];
+    if(!list.subscribed){
+      continue
+    }
+    data.ref[list.id] = {
+      name: list.name,
+      cards: []
+    }
+    data.lists.push(data.ref[list.id])
+  }
+
+  for(i in trelloJson.cards){
+    var card = trelloJson.cards[i];
+    if(!data.ref[card.idList]){
+      continue
+    }
+
+    content = marked(card.desc)
+
+    data.ref[card.id] = {
+      name: "#" + card.idShort + " " + card.name,
+      desc: content.slice(0, content.indexOf("<hr>")),
+      actions: []
+    }
+
+    data.ref[card.idList].cards.push(data.ref[card.id])
+  }
+
+  for(i in trelloJson.checklists){
+    var checklist = trelloJson.checklists[i];
+    if(!checklist.name.match(/acceptance/i)){
+      continue
+    }
+
+    for(j in checklist.checkItems) {
+      action = checklist.checkItems[j];
+
+      data.ref[action.id] = {
+        text: marked(action.name)
+      }
+
+      try{
+        data.ref[checklist.idCard].actions.push(data.ref[action.id])
+      } catch(e){}
+    }
+  }
+
+  // for(i in trelloJson.actions){
+  //   var action = trelloJson.actions[i]
+
+  //     if(action.type != "commentCard"){
+  //       continue
+  //     }
+
+  //   data.ref[action.id] = {
+  //     text: marked(action.data.text),
+  //     date: moment(action.date).format('YYYY-MM-DD')
+  //   }
+
+  //   try{
+  //     data.ref[action.data.card.id].actions.push(data.ref[action.id])
+  //   } catch(e){}
+  // }
+  return data;
+}
+
+function showData(data) {
+  var template = $('#template-output').html();
+  console.log(JSON.stringify(data,null,2));
+  $('#out').html(Mustache.render(template, data))
+}
+
+function autorun() {
+  if(null == data){
+    return alert('Please insert JSON data from Trello in the code')
+  }
+  showData(eatData(data));
+}
+
+if (document.addEventListener) document.addEventListener("DOMContentLoaded", autorun, false);
+else if (document.attachEvent) document.attachEvent("onreadystatechange", autorun);
+else window.onload = autorun;
+    </script>
+  </body>
+</html>
