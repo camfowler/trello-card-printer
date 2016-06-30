@@ -13,7 +13,13 @@ if test ! "$auth_token"; then
   echo "$auth_token" > .auth_token
 fi
 
-board_json=$(curl -s "https://api.trello.com/1/boards/j9Umz8ni?key=$application_key&token=$auth_token&fields=all&actions=all&action_fields=all&actions_limit=1000&cards=all&card_fields=all&card_attachments=true&labels=all&lists=all&list_fields=all&members=all&member_fields=all&checklists=all&checklist_fields=all&organization=false")
+board_id=$(cat board_id 2>/dev/null)
+if test ! "$board_id"; then
+  read -rp "Paste board id (Found in URL of board, e.g. j1Pma3ai): " board_id
+  echo "$board_id" > board_id
+fi
+
+board_json=$(curl -s "https://api.trello.com/1/boards/$board_id?key=$application_key&token=$auth_token&fields=all&actions=all&action_fields=all&actions_limit=1000&cards=all&card_fields=all&card_attachments=true&labels=all&lists=all&list_fields=all&members=all&member_fields=all&checklists=all&checklist_fields=all&organization=false")
 
 echo "data = $board_json" > board.js
 
